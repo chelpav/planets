@@ -1,26 +1,57 @@
 
-const CanvasSize = {heigth: 1100, width: 1100}
-const Background = 50
-const Period = 240 * 60
-const SCL = 100
+function componentToHex(c) {
+  let hex = c.toString(16)
+  return hex.length == 1 ? "0" + hex : hex;
+}
 
-const G = 6.67 * 10 ** (-11)
-const Units = {"SW": 1.98855 * 10**30, "EW": 5.972 * 10**24}
-const AE = 1.496 * 10**11
+function rgbToHex(r, g, b) {
+  return "#" + this.componentToHex(r) + this.componentToHex(g) + this.componentToHex(b);
+}
 
 class Mass{
+    G = 6.67 * 10 ** (-11)
+    Units = {"SW": 1.98855 * 10**30, "EW": 5.972 * 10**24}
+    AE = 1.496 * 10**11
+
     constructor(name, x, y, mass, unit, xv, yv, size, color){
         this.name = name
         this.x = x * AE
         this.y = y * AE
+        this.startX = x
+        this.startY = y
+        this.startMass = mass
         this.mass = mass * Units[unit]
+        this.unit = unit
         this.xv = xv
         this.yv = yv
+        this.startXV = xv
+        this.startYV = yv
         this.size = size
         this.color = color
+        this.hexColor = this.rgbToHex(...color)
     }
 
-    draw(){
+    componentToHex(c) {
+      let hex = c.toString(16)
+      return hex.length == 1 ? "0" + hex : hex;
+    }
+    
+    rgbToHex(r, g, b) {
+      return "#" + this.componentToHex(r) + this.componentToHex(g) + this.componentToHex(b);
+    }
+
+
+    hexToRgb() {
+      let result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(this.hexColor);
+      this.color = result ? [
+        parseInt(result[1], 16),
+        parseInt(result[2], 16),
+        parseInt(result[3], 16)
+     ] : null;
+     console.log(this.color, this.hexColor)
+    }
+
+    draw(){        
         fill(...this.color)
         stroke(this.color[0]/2, this.color[1]/2, this.color[2]/2)
         let x = (this.x == 0 ? 0 : this.x / AE) * SCL + CanvasSize.width / 2
@@ -50,17 +81,49 @@ class Mass{
         this.y += this.yv * Period
 
     }
-
 }
 
-// let Masses = [
-//     new Mass("Sun", 0, 0, 1, "SW", 0, 0, 30, [255, 255, 0]),
-//     new Mass("Mercury", 0, 0.46, 0.055, "EW", 38700, 0, 10, [255, 20, 20]),
-//     new Mass("Venus", 0, 0.723, 0.815, "EW", 35020, 0, 20, [100, 204, 150]),
-//     new Mass("Earth", 0, 1, 1, "EW", 30000, 0, 20, [52, 204, 235]),
-//     new Mass("Mars", 0, 1.666, 0.107, "EW", 24130, 0, 15, [200, 30, 30]),
-// ]
-let Masses = []
+const G = 6.67 * 10 ** (-11)
+const Units = {"SW": 1.98855 * 10**30, "EW": 5.972 * 10**24}
+const AE = 1.496 * 10**11
+
+let Masses = [
+    new Mass("Sun", 0, 0, 1, "SW", 0, 0, 30, [255, 255, 0]),
+    new Mass("Mercury", 0, 0.46, 0.055, "EW", 38700, 0, 10, [255, 20, 20]),
+    new Mass("Venus", 0, 0.723, 0.815, "EW", 35020, 0, 20, [100, 204, 150]),
+    new Mass("Earth", 0, 1, 1, "EW", 30000, 0, 20, [52, 204, 235]),
+    new Mass("Mars", 0, 1.666, 0.107, "EW", 24130, 0, 15, [200, 30, 30]),
+]
+
+const app = Vue.createApp({
+  data() { 
+    return {
+      components: {
+        MassesTable
+      },
+      masses: Masses,
+      value: "#ffffff",
+      changeColor: function () {
+        Masses.forEach(el => el.hexToRgb())
+      }      
+    }
+  }
+}).mount('#app')
+
+
+
+
+
+const CanvasSize = {heigth: 1100, width: 1100}
+const Background = 50
+let Period = 240 * 60
+const SCL = 100
+
+
+
+
+
+// let Masses = []
 
 let DefaultSystem 
 function preload(){
@@ -69,18 +132,22 @@ function preload(){
 
 function setup() {
     createCanvas(CanvasSize.heigth, CanvasSize.width);
-    newSystem(DefaultSystem["masses"])
-
+    // newSystem(DefaultSystem["masses"])
+   
 }
   
 function draw() {
     background(Background, 10)
+  
     for (let i = 0; i < Masses.length; i++){
-        for (let j = i+1; j < Masses.length; j++){
-            Masses[i].gravitate(Masses[j])
-        }
         Masses[i].draw()
+  
+        for (let j = i+1; j < Masses.length; j++){
+             Masses[i].gravitate(Masses[j])
+        } 
         Masses[i].move()
+  
+    
     }
   }
 
@@ -120,9 +187,10 @@ function draw() {
 
   function newSystem(arr){
     background(Background)
-    Masses = []
+    let Masses = []
     arr.forEach(el => {
       let m = new Mass(el.name, el.x , el.y, el.mass, el.unit, el.xv, el.yv, el.size, el.color)
       Masses.push(m)  
       })
+    return Masses
   }
